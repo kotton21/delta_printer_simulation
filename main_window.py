@@ -1,66 +1,35 @@
 #!/usr/bin/env python3
-"""Main window: wires the sidebar's tower-height / effector-position
-sliders to DeltaKinematicsRuntime's forward/inverse kinematics and the 2D
-visualizer, guarding against feedback loops via the sidebar's
-signal-blocked setters.
+"""Main window: hosts one tab per delta schema. Each tab owns its own
+model/runtime pair and wiring (see widgets/linear_delta_tab.py and
+widgets/conical_delta_tab.py); this window just arranges them in a
+QTabWidget and forwards each tab's status messages to the shared status
+bar.
 """
-from PySide6.QtWidgets import QHBoxLayout, QMainWindow, QWidget
+from PySide6.QtWidgets import QMainWindow, QTabWidget
 
-from render_geometry import build_render_geometry
-from widgets.sidebar import SidebarPanel
-from widgets.view_2d import TwoDViewWidget
-
-DEFAULT_EFFECTOR_POINT = (0.0, 0.0, 200.0)
+from widgets.conical_delta_tab import ConicalDeltaTab
+from widgets.linear_delta_tab import LinearDeltaTab
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, model, runtime, parent=None):
+    def __init__(self, linear_model, linear_runtime, conical_model, conical_runtime, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Delta Robot Kinematics Visualizer")
 
-        self._model = model
-        self._runtime = runtime
+        tabs = QTabWidget()
+        self.setCentralWidget(tabs)
 
-        self._sidebar = SidebarPanel(model["axis_limits"])
-        self._visualizer = TwoDViewWidget(model)
+        linear_tab = LinearDeltaTab(linear_model, linear_runtime)
+        conical_tab = ConicalDeltaTab(conical_model, conical_runtime)
 
-        central = QWidget()
-        layout = QHBoxLayout(central)
-        layout.addWidget(self._sidebar, stretch=0)
-        layout.addWidget(self._visualizer, stretch=1)
-        self.setCentralWidget(central)
+        linear_tab.statusMessage.connect(self._on_status_message)
+        conical_tab.statusMessage.connect(self._on_status_message)
 
-        self._sidebar.towerHeightsChanged.connect(self._on_tower_heights_changed)
-        self._sidebar.effectorPositionChanged.connect(self._on_effector_position_changed)
+        tabs.addTab(linear_tab, "Linear Delta (K280)")
+        tabs.addTab(conical_tab, "Conical Delta")
 
-        self._initialize_default_pose()
-
-    def _initialize_default_pose(self):
-        x, y, z = DEFAULT_EFFECTOR_POINT
-        heights = self._runtime.inverse_kinematics((x, y, z))
-        self._sidebar.set_tower_heights(*heights)
-        self._sidebar.set_effector_position(x, y, z)
-        geom = build_render_geometry(self._model, heights, (x, y, z))
-        self._visualizer.update_pose(geom)
-
-    def _on_tower_heights_changed(self, h0, h1, h2):
-        try:
-            x, y, z = self._runtime.forward_kinematics([h0, h1, h2])
-        except ValueError as exc:
-            self.statusBar().showMessage(f"Unreachable pose: {exc}")
-            return
-        self.statusBar().clearMessage()
-        self._sidebar.set_effector_position(x, y, z)
-        geom = build_render_geometry(self._model, [h0, h1, h2], (x, y, z))
-        self._visualizer.update_pose(geom)
-
-    def _on_effector_position_changed(self, x, y, z):
-        try:
-            h0, h1, h2 = self._runtime.inverse_kinematics((x, y, z))
-        except ValueError as exc:
-            self.statusBar().showMessage(f"Unreachable pose: {exc}")
-            return
-        self.statusBar().clearMessage()
-        self._sidebar.set_tower_heights(h0, h1, h2)
-        geom = build_render_geometry(self._model, [h0, h1, h2], (x, y, z))
-        self._visualizer.update_pose(geom)
+    def _on_status_message(self, message):
+        if message:
+            self.statusBar().showMessage(message)
+        else:
+            self.statusBar().clearMessage()
