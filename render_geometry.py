@@ -31,6 +31,12 @@ def build_render_geometry_conical(model, rail_s_values, effector_point):
 
     Returns {"towers": [{"base": (x,y,0), "carriage": (x,y,z)}, ...],
     "effector": (x,y,z)}.
+
+    Also used as-is by the adjustable-rod-length conical delta tab: rod
+    length only affects which rail_s value a given effector point maps to
+    (already baked into `rail_s_values` by that point), not how a
+    (base, dir, rail_s) triple turns into a carriage position, so no
+    separate render-geometry builder is needed for that schema.
     """
     towers = [
         {"base": base, "carriage": (base[0] + s * d[0], base[1] + s * d[1], base[2] + s * d[2])}

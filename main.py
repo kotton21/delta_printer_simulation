@@ -3,8 +3,10 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
+import adjustable_conical_delta_kinematics
 import conical_delta_kinematics
 import linear_delta_kinematics
+from adjustable_conical_delta_runtime import AdjustableConicalDeltaKinematicsRuntime
 from conical_delta_runtime import ConicalDeltaKinematicsRuntime
 from linear_delta_runtime import DeltaKinematicsRuntime
 from main_window import MainWindow
@@ -19,7 +21,14 @@ def main(argv):
     conical_model = conical_delta_kinematics.load_model(conical_delta_kinematics.DEFAULT_MODEL_FILE)
     conical_runtime = ConicalDeltaKinematicsRuntime.from_model(conical_model)
 
-    window = MainWindow(linear_model, linear_runtime, conical_model, conical_runtime)
+    adjustable_conical_model = adjustable_conical_delta_kinematics.load_model(
+        adjustable_conical_delta_kinematics.DEFAULT_MODEL_FILE)
+    adjustable_conical_runtime = AdjustableConicalDeltaKinematicsRuntime.from_model(adjustable_conical_model)
+
+    window = MainWindow(
+        linear_model, linear_runtime, conical_model, conical_runtime,
+        adjustable_conical_model, adjustable_conical_runtime,
+    )
     window.resize(1200, 700)
     window.show()
 
