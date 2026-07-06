@@ -214,6 +214,32 @@ def validate_axis_limits(model, point):
         )
 
 
+def compute_max_carriage_heights(model):
+    """Return the maximum reachable carriage height (mm) for each tower,
+    given the model's rod length and axis limits.
+
+    From ik_exprs, h_i = z + sqrt(rod_length**2 - dx**2 - dy**2), where
+    (dx, dy) is the horizontal offset between the effector and tower i's
+    own (x, y) rail position. For fixed offset this is increasing in z,
+    and for fixed z it's decreasing in the offset, so it's maximized by
+    driving z to z_max and the offset to the smallest value reachable
+    within the printable radius: zero if the tower's own position already
+    lies within that radius, otherwise the distance from the tower to the
+    printable-radius circle's edge.
+    """
+    axis_limits = model["axis_limits"]
+    rod_length = model["geometry"]["rod_length_mm"]
+    printable_radius = axis_limits["printable_radius_mm"]
+    z_max = axis_limits["z_max_mm"]
+
+    heights = []
+    for tx, ty in model["tower_positions"]:
+        tower_radius = math.hypot(tx, ty)
+        min_offset = max(0.0, tower_radius - printable_radius)
+        heights.append(z_max + math.sqrt(max(rod_length**2 - min_offset**2, 0.0)))
+    return heights
+
+
 def compute_inverse_kinematics(model, point):
     """Return the carriage height (mm) for each tower that reaches the
     given effector position, or raise ValueError if the point is outside

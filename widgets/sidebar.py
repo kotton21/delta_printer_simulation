@@ -80,7 +80,7 @@ class SidebarPanel(QWidget):
     towerHeightsChanged = Signal(float, float, float)
     effectorPositionChanged = Signal(float, float, float)
 
-    def __init__(self, axis_limits, parent=None):
+    def __init__(self, axis_limits, tower_height_max, parent=None):
         super().__init__(parent)
         z_min = axis_limits["z_min_mm"]
         z_max = axis_limits["z_max_mm"]
@@ -91,7 +91,7 @@ class SidebarPanel(QWidget):
         tower_box = QGroupBox("Tower Heights (Forward Kinematics)")
         tower_form = QFormLayout(tower_box)
         self._tower_rows = [
-            SliderSpinRow(z_min, z_max, z_min, self) for _ in range(3)
+            SliderSpinRow(z_min, tower_height_max, z_min, self) for _ in range(3)
         ]
         for i, row in enumerate(self._tower_rows):
             tower_form.addRow(f"Axis {i + 1}", row)
